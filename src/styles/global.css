@@ -1,0 +1,43 @@
+:root {
+  --color-bg-primary: #0f172a; /* Slate 900 */
+  --color-bg-secondary: #1e293b; /* Slate 800 */
+  --color-text-primary: #f8fafc; /* Slate 50 */
+  --color-text-secondary: #cbd5e1; /* Slate 300 */
+  --color-accent: #3b82f6; /* Blue 500 */
+  --color-accent-hover: #2563eb; /* Blue 600 */
+  --color-danger: #ef4444; /* Red 500 */
+  --color-success: #10b981; /* Emerald 500 */
+  
+  --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-primary);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+button {
+  font-family: var(--font-primary);
+  cursor: pointer;
+  border: none;
+  outline: none;
+}

@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Function to check if user is signed in
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Function to check if user is an admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // Anyone can read profiles (for event organizers, etc.), but only owner or admin can write
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Users can update their own doc, but cannot change their own role to 'admin' unless they are already an admin
+      allow update: if (isAuthenticated() && request.auth.uid == userId && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))) || isAdmin();
+      allow delete: if isAdmin();
+      
+      // User specific notifications
+      match /notifications/{notificationId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
+    // Events Collection
+    match /events/{eventId} {
+      // Anyone can view approved events. Admins can view all. Organizers can view their own.
+      allow read: if resource.data.status == 'approved' 
+                  || isAdmin() 
+                  || (isAuthenticated() && resource.data.organizerId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.organizerId == request.auth.uid;
+      // Organizers can update their own events. Admins can update any.
+      allow update: if (isAuthenticated() && resource.data.organizerId == request.auth.uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Tickets Collection
+    match /tickets/{ticketId} {
+      // Users can only see their own tickets. Admins can see all.
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Categories Collection
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
