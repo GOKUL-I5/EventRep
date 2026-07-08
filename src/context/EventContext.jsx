@@ -22,36 +22,97 @@ export const EventProvider = ({ children }) => {
   // Fetch events globally based on role
   useEffect(() => {
     setLoadingEvents(true);
-    let q;
-    if (currentUser && currentUser.role === 'admin') {
-      q = query(collection(db, "events"), orderBy("createdAt", "desc"));
-    } else {
-      q = query(collection(db, "events"), where("status", "==", "approved"), orderBy("createdAt", "desc"));
-    }
     
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-      if (querySnapshot.empty && !isSeeding) {
-        setIsSeeding(true);
-        try {
-          await seedDatabase();
-        } catch (error) {
-          console.error("Auto-seed failed:", error);
-        } finally {
-          setIsSeeding(false);
+    if (currentUser && currentUser.role === 'admin') {
+      // Admins see all events, ordered by createdAt desc in memory to avoid index requirements if any filter is added later.
+      const q = query(collection(db, "events"));
+      const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        if (querySnapshot.empty && !isSeeding) {
+          setIsSeeding(true);
+          try {
+            await seedDatabase();
+          } catch (error) {
+            console.error("Auto-seed failed:", error);
+          } finally {
+            setIsSeeding(false);
+          }
+          return;
         }
-        return; // The snapshot listener will re-trigger when seed finishes
+
+        let fetchedEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        fetchedEvents.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+          const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+          return timeB - timeA;
+        });
+
+        setEvents(fetchedEvents);
+        setLoadingEvents(false);
+      }, (error) => {
+        console.error("Error fetching admin events: ", error);
+        setLoadingEvents(false);
+      });
+
+      return () => unsubscribe();
+    } else {
+      // Non-admins see all approved events, plus their own created events (draft, pending, etc.)
+      const qApproved = query(collection(db, "events"), where("status", "==", "approved"));
+      
+      let approvedEvents = [];
+      let myEvents = [];
+
+      const updateCombinedEvents = () => {
+        const mergedMap = new Map();
+        approvedEvents.forEach(ev => mergedMap.set(ev.id, ev));
+        myEvents.forEach(ev => mergedMap.set(ev.id, ev));
+
+        const combined = Array.from(mergedMap.values());
+        combined.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+          const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+          return timeB - timeA;
+        });
+
+        setEvents(combined);
+        setLoadingEvents(false);
+      };
+
+      const unsubscribeApproved = onSnapshot(qApproved, async (querySnapshot) => {
+        if (querySnapshot.empty && !isSeeding && !currentUser) {
+          setIsSeeding(true);
+          try {
+            await seedDatabase();
+          } catch (error) {
+            console.error("Auto-seed failed:", error);
+          } finally {
+            setIsSeeding(false);
+          }
+          return;
+        }
+
+        approvedEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCombinedEvents();
+      }, (error) => {
+        console.error("Error fetching approved events: ", error);
+        setLoadingEvents(false);
+      });
+
+      let unsubscribeMyEvents = () => {};
+      if (currentUser) {
+        const qMyEvents = query(collection(db, "events"), where("organizerId", "==", currentUser.uid));
+        unsubscribeMyEvents = onSnapshot(qMyEvents, (querySnapshot) => {
+          myEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          updateCombinedEvents();
+        }, (error) => {
+          console.error("Error fetching my events: ", error);
+        });
       }
 
-      let fetchedEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      setEvents(fetchedEvents);
-      setLoadingEvents(false);
-    }, (error) => {
-      console.error("Error fetching events: ", error);
-      setLoadingEvents(false);
-    });
-
-    return () => unsubscribe();
+      return () => {
+        unsubscribeApproved();
+        unsubscribeMyEvents();
+      };
+    }
   }, [currentUser]);
 
   // Fetch tickets whenever currentUser changes
@@ -251,9 +312,14 @@ export const EventProvider = ({ children }) => {
   const fetchMyTickets = async () => {
     if (!currentUser) return;
     try {
-      const q = query(collection(db, "tickets"), where("userId", "==", currentUser.uid), where("status", "==", "active"), orderBy("createdAt", "desc"));
+      const q = query(collection(db, "tickets"), where("userId", "==", currentUser.uid), where("status", "==", "active"));
       const querySnapshot = await getDocs(q);
       const tickets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      tickets.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+        const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+        return timeB - timeA;
+      });
       setMyTickets(tickets);
     } catch (error) {
       console.error("Error fetching tickets: ", error);
