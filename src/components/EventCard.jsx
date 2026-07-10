@@ -77,6 +77,9 @@ const EventCard = ({ event, viewMode = 'grid', index = 0 }) => {
     if (status.toLowerCase() === 'live') { color = '#ef4444'; bg = 'rgba(239, 68, 68, 0.1)'; }
     if (status.toLowerCase() === 'completed') { color = '#10b981'; bg = 'rgba(16, 185, 129, 0.1)'; }
     if (status.toLowerCase() === 'cancelled') { color = '#f59e0b'; bg = 'rgba(245, 158, 11, 0.1)'; }
+    if (status.toLowerCase() === 'pending') { color = '#f59e0b'; bg = 'rgba(245, 158, 11, 0.1)'; }
+    if (status.toLowerCase() === 'rejected') { color = '#ef4444'; bg = 'rgba(239, 68, 68, 0.1)'; }
+    if (status.toLowerCase() === 'draft') { color = 'rgba(255, 255, 255, 0.5)'; bg = 'rgba(255, 255, 255, 0.05)'; }
     
     return (
       <span style={{ 

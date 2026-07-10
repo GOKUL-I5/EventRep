@@ -23,9 +23,18 @@ const ManageEvents = () => {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const q = query(collection(db, "events"), where("organizerId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+      const q = query(collection(db, "events"), where("organizerId", "==", currentUser.uid));
       const querySnapshot = await getDocs(q);
-      setMyEvents(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const fetched = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Sort client-side by createdAt descending to avoid index errors
+      fetched.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+        const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+        return timeB - timeA;
+      });
+
+      setMyEvents(fetched);
     } catch (error) {
       console.error(error);
       toast.error("Failed to load your events");

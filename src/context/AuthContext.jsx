@@ -40,11 +40,12 @@ export function AuthProvider({ children }) {
         photoURL = await getDownloadURL(uploadTask.ref);
       }
 
+      const isAdminEmail = data.email.toLowerCase() === 'gokulmadara.1@gmail.com';
       const userDoc = {
         uid: user.uid,
-        firstName: data.firstName || '',
-        lastName: data.lastName || '',
-        username: data.username || '',
+        firstName: isAdminEmail ? 'gokul' : (data.firstName || ''),
+        lastName: isAdminEmail ? '' : (data.lastName || ''),
+        username: isAdminEmail ? 'gokul' : (data.username || ''),
         email: data.email,
         mobileNumber: data.mobileNumber || '',
         dob: data.dob || '',
@@ -54,7 +55,7 @@ export function AuthProvider({ children }) {
         socialLinks: { twitter: '', linkedin: '', github: '' },
         photoURL: photoURL,
         createdAt: serverTimestamp(),
-        role: 'user'
+        role: isAdminEmail ? 'admin' : 'user'
       };
 
       await setDoc(doc(db, "users", user.uid), userDoc);
@@ -104,24 +105,32 @@ export function AuthProvider({ children }) {
     const docRef = doc(db, "users", user.uid);
     const docSnap = await getDoc(docRef);
     
+    const isAdminEmail = user.email.toLowerCase() === 'gokulmadara.1@gmail.com';
     if (!docSnap.exists()) {
       const userDoc = {
         uid: user.uid,
-        firstName: user.displayName?.split(' ')[0] || '',
-        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-        username: user.email.split('@')[0],
+        firstName: isAdminEmail ? 'gokul' : (user.displayName?.split(' ')[0] || ''),
+        lastName: isAdminEmail ? '' : (user.displayName?.split(' ').slice(1).join(' ') || ''),
+        username: isAdminEmail ? 'gokul' : user.email.split('@')[0],
         email: user.email,
         bio: '',
         location: '',
         socialLinks: { twitter: '', linkedin: '', github: '' },
         photoURL: user.photoURL || '',
         createdAt: serverTimestamp(),
-        role: 'user'
+        role: isAdminEmail ? 'admin' : 'user'
       };
       await setDoc(docRef, userDoc);
       setUserData(userDoc);
     } else {
-      setUserData(docSnap.data());
+      const existingData = docSnap.data();
+      if (isAdminEmail && (existingData.role !== 'admin' || existingData.firstName !== 'gokul')) {
+        const updates = { role: 'admin', firstName: 'gokul', lastName: '', username: 'gokul' };
+        await updateDoc(docRef, updates);
+        setUserData({ ...existingData, ...updates });
+      } else {
+        setUserData(existingData);
+      }
     }
     return result;
   }
@@ -147,7 +156,33 @@ export function AuthProvider({ children }) {
       if (user) {
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
+        const isAdminEmail = user.email.toLowerCase() === 'gokulmadara.1@gmail.com';
         if (docSnap.exists()) {
+          const existingData = docSnap.data();
+          if (isAdminEmail && (existingData.role !== 'admin' || existingData.firstName !== 'gokul')) {
+            const updates = { role: 'admin', firstName: 'gokul', lastName: '', username: 'gokul' };
+            await updateDoc(docRef, updates);
+            setUserData({ ...existingData, ...updates });
+          } else {
+            setUserData(existingData);
+          }
+        } else if (isAdminEmail) {
+          const userDoc = {
+            uid: user.uid,
+            firstName: 'gokul',
+            lastName: '',
+            username: 'gokul',
+            email: user.email,
+            bio: '',
+            location: '',
+            socialLinks: { twitter: '', linkedin: '', github: '' },
+            photoURL: user.photoURL || '',
+            createdAt: serverTimestamp(),
+            role: 'admin'
+          };
+          await setDoc(docRef, userDoc);
+          setUserData(userDoc);
+        } else {
           setUserData(docSnap.data());
         }
       } else {

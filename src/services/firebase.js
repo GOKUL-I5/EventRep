@@ -18,7 +18,13 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
+
+const storageInstance = getStorage(app);
+// Set retry timeout to 6000ms to prevent infinite hanging when uploads fail (e.g. CORS issues)
+storageInstance.maxUploadRetryTime = 6000;
+storageInstance.maxOperationRetryTime = 6000;
+
+export const storage = storageInstance;
 export const googleProvider = new GoogleAuthProvider();
 
 export default app;

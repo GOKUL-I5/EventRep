@@ -25,7 +25,7 @@ service cloud.firestore {
       
       // User specific notifications
       match /notifications/{notificationId} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        allow read, write: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       }
     }
 

@@ -8,6 +8,47 @@ import { db, storage } from '../services/firebase';
 import { useAuth } from './AuthContext';
 import { seedDatabase } from '../utils/seeder';
 
+const compressImageToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Compress as JPEG with 0.7 quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(dataUrl);
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 const EventContext = createContext();
 
 export const useEvent = () => useContext(EventContext);
@@ -22,36 +63,97 @@ export const EventProvider = ({ children }) => {
   // Fetch events globally based on role
   useEffect(() => {
     setLoadingEvents(true);
-    let q;
-    if (currentUser && currentUser.role === 'admin') {
-      q = query(collection(db, "events"), orderBy("createdAt", "desc"));
-    } else {
-      q = query(collection(db, "events"), where("status", "==", "approved"), orderBy("createdAt", "desc"));
-    }
     
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-      if (querySnapshot.empty && !isSeeding) {
-        setIsSeeding(true);
-        try {
-          await seedDatabase();
-        } catch (error) {
-          console.error("Auto-seed failed:", error);
-        } finally {
-          setIsSeeding(false);
+    if (currentUser && currentUser.role === 'admin') {
+      // Admins see all events, ordered by createdAt desc in memory to avoid index requirements if any filter is added later.
+      const q = query(collection(db, "events"));
+      const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        if (querySnapshot.empty && !isSeeding) {
+          setIsSeeding(true);
+          try {
+            await seedDatabase();
+          } catch (error) {
+            console.error("Auto-seed failed:", error);
+          } finally {
+            setIsSeeding(false);
+          }
+          return;
         }
-        return; // The snapshot listener will re-trigger when seed finishes
+
+        let fetchedEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        fetchedEvents.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+          const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+          return timeB - timeA;
+        });
+
+        setEvents(fetchedEvents);
+        setLoadingEvents(false);
+      }, (error) => {
+        console.error("Error fetching admin events: ", error);
+        setLoadingEvents(false);
+      });
+
+      return () => unsubscribe();
+    } else {
+      // Non-admins see all approved events, plus their own created events (draft, pending, etc.)
+      const qApproved = query(collection(db, "events"), where("status", "==", "approved"));
+      
+      let approvedEvents = [];
+      let myEvents = [];
+
+      const updateCombinedEvents = () => {
+        const mergedMap = new Map();
+        approvedEvents.forEach(ev => mergedMap.set(ev.id, ev));
+        myEvents.forEach(ev => mergedMap.set(ev.id, ev));
+
+        const combined = Array.from(mergedMap.values());
+        combined.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+          const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+          return timeB - timeA;
+        });
+
+        setEvents(combined);
+        setLoadingEvents(false);
+      };
+
+      const unsubscribeApproved = onSnapshot(qApproved, async (querySnapshot) => {
+        if (querySnapshot.empty && !isSeeding && !currentUser) {
+          setIsSeeding(true);
+          try {
+            await seedDatabase();
+          } catch (error) {
+            console.error("Auto-seed failed:", error);
+          } finally {
+            setIsSeeding(false);
+          }
+          return;
+        }
+
+        approvedEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCombinedEvents();
+      }, (error) => {
+        console.error("Error fetching approved events: ", error);
+        setLoadingEvents(false);
+      });
+
+      let unsubscribeMyEvents = () => {};
+      if (currentUser) {
+        const qMyEvents = query(collection(db, "events"), where("organizerId", "==", currentUser.uid));
+        unsubscribeMyEvents = onSnapshot(qMyEvents, (querySnapshot) => {
+          myEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          updateCombinedEvents();
+        }, (error) => {
+          console.error("Error fetching my events: ", error);
+        });
       }
 
-      let fetchedEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      setEvents(fetchedEvents);
-      setLoadingEvents(false);
-    }, (error) => {
-      console.error("Error fetching events: ", error);
-      setLoadingEvents(false);
-    });
-
-    return () => unsubscribe();
+      return () => {
+        unsubscribeApproved();
+        unsubscribeMyEvents();
+      };
+    }
   }, [currentUser]);
 
   // Fetch tickets whenever currentUser changes
@@ -89,22 +191,68 @@ export const EventProvider = ({ children }) => {
     try {
       const eventRef = doc(collection(db, "events"));
       let imageUrl = "";
+      const galleryUrls = [];
+      const uploadPromises = [];
+      let fallbackUsed = false;
 
+      // Parallelize image file uploads to Firebase Storage for ultra-fast creation
       if (imageFile) {
-        const storageRef = ref(storage, `eventImages/${eventRef.id}_${imageFile.name}`);
-        const uploadTask = await uploadBytesResumable(storageRef, imageFile);
-        imageUrl = await getDownloadURL(uploadTask.ref);
+        const storageRef = ref(storage, `events/${eventRef.id}/${imageFile.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, imageFile);
+        uploadPromises.push(
+          uploadTask.then(async (snapshot) => {
+            imageUrl = await getDownloadURL(snapshot.ref);
+          }).catch(async (err) => {
+            console.warn("Cover image upload failed, compressing to base64:", err);
+            try {
+              imageUrl = await compressImageToBase64(imageFile);
+            } catch (compressErr) {
+              console.error("Compression failed:", compressErr);
+              imageUrl = "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80";
+            }
+            fallbackUsed = true;
+          })
+        );
       }
 
-      const galleryUrls = [];
       if (galleryFiles && galleryFiles.length > 0) {
-        for (let i = 0; i < galleryFiles.length; i++) {
-          const gFile = galleryFiles[i];
-          const gRef = ref(storage, `eventImages/${eventRef.id}_gallery_${i}_${gFile.name}`);
-          const uploadTask = await uploadBytesResumable(gRef, gFile);
-          const gUrl = await getDownloadURL(uploadTask.ref);
-          galleryUrls.push(gUrl);
+        galleryFiles.forEach((gFile, idx) => {
+          const gRef = ref(storage, `events/${eventRef.id}/gallery_${idx}_${gFile.name}`);
+          const uploadTask = uploadBytesResumable(gRef, gFile);
+          uploadPromises.push(
+            uploadTask.then(async (snapshot) => {
+              const url = await getDownloadURL(snapshot.ref);
+              galleryUrls[idx] = url;
+            }).catch(async (err) => {
+              console.warn(`Gallery image ${idx} upload failed, compressing to base64:`, err);
+              try {
+                galleryUrls[idx] = await compressImageToBase64(gFile);
+              } catch (compressErr) {
+                console.error("Gallery compression failed:", compressErr);
+              }
+              fallbackUsed = true;
+            })
+          );
+        });
+      }
+
+      if (uploadPromises.length > 0) {
+        try {
+          await Promise.all(uploadPromises);
+        } catch (uploadError) {
+          console.warn("Some image uploads failed, continuing with placeholders:", uploadError);
+          fallbackUsed = true;
         }
+      }
+
+      // If imageUrl is empty but the user provided an image that failed, use base64 or placeholder
+      if (imageFile && !imageUrl) {
+        try {
+          imageUrl = await compressImageToBase64(imageFile);
+        } catch (compressErr) {
+          imageUrl = "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80";
+        }
+        fallbackUsed = true;
       }
 
       const newEvent = {
@@ -118,7 +266,7 @@ export const EventProvider = ({ children }) => {
         ticketTypes: eventData.ticketTypes || [{ type: 'General', price: Number(eventData.price) || 0 }],
         capacity: Number(eventData.capacity) || 0,
         imageUrl,
-        galleryUrls,
+        galleryUrls: galleryUrls.filter(url => !!url),
         organizerId: currentUser.uid,
         status: eventData.status || 'pending', // draft, pending, approved, rejected
         likesCount: 0,
@@ -130,7 +278,7 @@ export const EventProvider = ({ children }) => {
       if (newEvent.status === 'approved') {
         setEvents(prev => [{ id: eventRef.id, ...newEvent }, ...prev]);
       }
-      return eventRef.id;
+      return { id: eventRef.id, fallbackUsed };
     } catch (error) {
       throw error;
     }
@@ -145,9 +293,14 @@ export const EventProvider = ({ children }) => {
       let imageUrl = updatedData.imageUrl;
 
       if (imageFile) {
-        const storageRef = ref(storage, `eventImages/${eventId}_${imageFile.name}`);
-        const uploadTask = await uploadBytesResumable(storageRef, imageFile);
-        imageUrl = await getDownloadURL(uploadTask.ref);
+        try {
+          const storageRef = ref(storage, `events/${eventId}/${imageFile.name}`);
+          const uploadTask = await uploadBytesResumable(storageRef, imageFile);
+          imageUrl = await getDownloadURL(uploadTask.ref);
+        } catch (storageErr) {
+          console.warn("Storage upload failed on edit, compressing to base64:", storageErr);
+          imageUrl = await compressImageToBase64(imageFile);
+        }
       }
 
       const updates = {
@@ -251,9 +404,14 @@ export const EventProvider = ({ children }) => {
   const fetchMyTickets = async () => {
     if (!currentUser) return;
     try {
-      const q = query(collection(db, "tickets"), where("userId", "==", currentUser.uid), where("status", "==", "active"), orderBy("createdAt", "desc"));
+      const q = query(collection(db, "tickets"), where("userId", "==", currentUser.uid), where("status", "==", "active"));
       const querySnapshot = await getDocs(q);
       const tickets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      tickets.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+        const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+        return timeB - timeA;
+      });
       setMyTickets(tickets);
     } catch (error) {
       console.error("Error fetching tickets: ", error);
