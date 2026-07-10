@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   FiHome, FiCalendar, FiBarChart2, FiBookOpen, FiUsers, FiSettings,
   FiSearch, FiBell, FiMoreVertical, FiEdit2, FiTrash2, FiEye
 } from 'react-icons/fi';
@@ -184,7 +184,7 @@ const dummyEvents = [
 // ----------------------
 
 const StatCard = ({ title, value, color }) => (
-  <motion.div 
+  <motion.div
     whileHover={{ y: -5 }}
     style={{
       background: 'rgba(255, 255, 255, 0.03)',
@@ -222,24 +222,24 @@ const StaticAdminDashboard = () => {
     const target = new Date(`${dateString}T${timeString}:00`);
     const diff = target - currentTime;
     if (diff <= 0) return "Started";
-    
+
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const m = Math.floor((diff / 1000 / 60) % 60);
     const s = Math.floor((diff / 1000) % 60);
-    
+
     return `${d}d ${h}h ${m}m ${s}s`;
   };
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#0a0a0a', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
-      
+
       {/* SIDEBAR */}
       <div style={{ width: '260px', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}>
         <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2.5rem', background: 'linear-gradient(to right, #fff, #888)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           EventAdmin.
         </div>
-        
+
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {[
             { name: 'Dashboard', icon: FiHome, disabled: true },
@@ -249,7 +249,7 @@ const StaticAdminDashboard = () => {
             { name: 'Users', icon: FiUsers, disabled: true },
             { name: 'Settings', icon: FiSettings, disabled: true }
           ].map((item) => (
-            <div 
+            <div
               key={item.name}
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '8px',
@@ -271,25 +271,25 @@ const StaticAdminDashboard = () => {
             <img src="https://i.pravatar.cc/150?img=11" alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
-            <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>Admin User</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>admin@events.com</div>
+            <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>gokul</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>gokulmadara.1@gmail.com</div>
           </div>
         </div>
       </div>
 
       {/* MAIN CONTENT */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        
+
         {/* TOP NAV */}
         <div style={{ height: '70px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem' }}>
           <h1 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>Events</h1>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', padding: '0.5rem 1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
               <FiSearch color="rgba(255,255,255,0.5)" />
               <input type="text" placeholder="Search events..." style={{ background: 'transparent', border: 'none', color: '#fff', marginLeft: '0.5rem', outline: 'none' }} />
             </div>
-            
+
             <div style={{ position: 'relative', cursor: 'pointer' }}>
               <FiBell size={20} color="rgba(255,255,255,0.7)" />
               <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%' }} />
@@ -299,7 +299,7 @@ const StaticAdminDashboard = () => {
 
         {/* DASHBOARD CONTENT */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
-          
+
           {/* STATS ROW */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <StatCard title="Total Events" value={stats.total} color="#ffffff" />
@@ -310,10 +310,10 @@ const StaticAdminDashboard = () => {
 
           {/* EVENTS LIST */}
           <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem' }}>All Events</h2>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
             {dummyEvents.map((event) => (
-              <motion.div 
+              <motion.div
                 key={event.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -330,7 +330,7 @@ const StaticAdminDashboard = () => {
                 {/* Banner */}
                 <div style={{ position: 'relative', height: '180px' }}>
                   <img src={event.imageUrl} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  
+
                   {/* Status Badge */}
                   <div style={{ position: 'absolute', top: '1rem', left: '1rem' }}>
                     {event.status === 'Live' && (
@@ -349,7 +349,7 @@ const StaticAdminDashboard = () => {
                       </span>
                     )}
                   </div>
-                  
+
                   {/* Category */}
                   <div style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(0,0,0,0.5)', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.75rem', color: '#fff', backdropFilter: 'blur(4px)' }}>
                     {event.category}
@@ -362,7 +362,7 @@ const StaticAdminDashboard = () => {
                   <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {event.description}
                   </p>
-                  
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginTop: 'auto' }}>
                     <div><span style={{ color: '#fff' }}>Date:</span> {event.date}</div>
                     <div><span style={{ color: '#fff' }}>Time:</span> {event.time}</div>
@@ -384,7 +384,7 @@ const StaticAdminDashboard = () => {
                     <span style={{ fontSize: '1.25rem', fontWeight: '700' }}>
                       {event.price === 0 ? 'Free' : `₹${event.price}`}
                     </span>
-                    
+
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                         <FiEye />

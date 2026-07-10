@@ -152,7 +152,7 @@ export const EventProvider = ({ children }) => {
       let imageUrl = "";
 
       if (imageFile) {
-        const storageRef = ref(storage, `eventImages/${eventRef.id}_${imageFile.name}`);
+        const storageRef = ref(storage, `events/${eventRef.id}/${imageFile.name}`);
         const uploadTask = await uploadBytesResumable(storageRef, imageFile);
         imageUrl = await getDownloadURL(uploadTask.ref);
       }
@@ -161,7 +161,7 @@ export const EventProvider = ({ children }) => {
       if (galleryFiles && galleryFiles.length > 0) {
         for (let i = 0; i < galleryFiles.length; i++) {
           const gFile = galleryFiles[i];
-          const gRef = ref(storage, `eventImages/${eventRef.id}_gallery_${i}_${gFile.name}`);
+          const gRef = ref(storage, `events/${eventRef.id}/gallery_${i}_${gFile.name}`);
           const uploadTask = await uploadBytesResumable(gRef, gFile);
           const gUrl = await getDownloadURL(uploadTask.ref);
           galleryUrls.push(gUrl);
@@ -206,7 +206,7 @@ export const EventProvider = ({ children }) => {
       let imageUrl = updatedData.imageUrl;
 
       if (imageFile) {
-        const storageRef = ref(storage, `eventImages/${eventId}_${imageFile.name}`);
+        const storageRef = ref(storage, `events/${eventId}/${imageFile.name}`);
         const uploadTask = await uploadBytesResumable(storageRef, imageFile);
         imageUrl = await getDownloadURL(uploadTask.ref);
       }

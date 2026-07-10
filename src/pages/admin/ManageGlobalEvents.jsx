@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { FiCheckCircle, FiXCircle, FiTrash2, FiExternalLink } from 'react-icons/fi';
 import { toast } from 'react-toastify';
@@ -28,10 +28,36 @@ const ManageGlobalEvents = () => {
 
   const handleStatusChange = async (eventId, newStatus) => {
     try {
+      const eventObj = events.find(e => e.id === eventId);
       await updateDoc(doc(db, "events", eventId), { status: newStatus });
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, status: newStatus } : e));
       toast.success(`Event marked as ${newStatus}`);
+
+      // Notify the organizer of the event status change
+      if (eventObj && eventObj.organizerId) {
+        const notifRef = doc(collection(db, "users", eventObj.organizerId, "notifications"));
+        if (newStatus === 'approved') {
+          await setDoc(notifRef, {
+            title: "Event Approved!",
+            message: `Your event "${eventObj.title}" has been approved by the Admin and is now live.`,
+            type: "success",
+            read: false,
+            createdAt: serverTimestamp(),
+            link: `/events/${eventId}`
+          });
+        } else if (newStatus === 'rejected') {
+          await setDoc(notifRef, {
+            title: "Event Rejected",
+            message: `Your event "${eventObj.title}" was not approved by the Admin.`,
+            type: "danger",
+            read: false,
+            createdAt: serverTimestamp(),
+            link: "/events/manage"
+          });
+        }
+      }
     } catch (error) {
+      console.error("Error updating status/sending notification:", error);
       toast.error("Failed to update status");
     }
   };
