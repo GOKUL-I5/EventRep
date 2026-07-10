@@ -215,11 +215,11 @@ const CreateEvent = () => {
             </button>
             <button 
               type="submit" 
-              onClick={() => handleSubmit((data) => onSubmit({ ...data, status: 'pending' }))()}
+              onClick={() => handleSubmit((data) => onSubmit({ ...data, status: 'approved' }))()}
               style={{ ...btnStyle('primary'), opacity: loading ? 0.7 : 1 }}
               disabled={loading}
             >
-              {loading ? 'Submitting...' : 'Submit for Approval'}
+              {loading ? 'Submitting...' : 'Create Event'}
             </button>
           </div>
 

@@ -36,9 +36,9 @@ service cloud.firestore {
                   || isAdmin() 
                   || (isAuthenticated() && resource.data.organizerId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.organizerId == request.auth.uid;
-      // Organizers can update their own events. Admins can update any.
+      // Organizers can update or delete their own events. Admins can update/delete any.
       allow update: if (isAuthenticated() && resource.data.organizerId == request.auth.uid) || isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if (isAuthenticated() && resource.data.organizerId == request.auth.uid) || isAdmin();
     }
 
     // Tickets Collection

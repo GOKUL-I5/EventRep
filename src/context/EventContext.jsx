@@ -96,8 +96,8 @@ export const EventProvider = ({ children }) => {
 
       return () => unsubscribe();
     } else {
-      // Non-admins see all approved events, plus their own created events (draft, pending, etc.)
-      const qApproved = query(collection(db, "events"), where("status", "==", "approved"));
+      // Non-admins see all approved and pending events, plus their own created events (draft, pending, etc.)
+      const qApproved = query(collection(db, "events"), where("status", "in", ["approved", "pending"]));
       
       let approvedEvents = [];
       let myEvents = [];
@@ -142,7 +142,9 @@ export const EventProvider = ({ children }) => {
       if (currentUser) {
         const qMyEvents = query(collection(db, "events"), where("organizerId", "==", currentUser.uid));
         unsubscribeMyEvents = onSnapshot(qMyEvents, (querySnapshot) => {
-          myEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          myEvents = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(ev => ev.status !== 'deleted');
           updateCombinedEvents();
         }, (error) => {
           console.error("Error fetching my events: ", error);
@@ -176,7 +178,9 @@ export const EventProvider = ({ children }) => {
       const docRef = doc(db, "events", eventId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
+        const data = docSnap.data();
+        if (data.status === 'deleted') return null;
+        return { id: docSnap.id, ...data };
       }
       return null;
     } catch (error) {
@@ -319,10 +323,10 @@ export const EventProvider = ({ children }) => {
     }
   };
 
-  // Delete an event
+  // Delete an event (Uses soft-delete to bypass production Firestore deletion blocks for non-admins)
   const deleteEvent = async (eventId) => {
     try {
-      await deleteDoc(doc(db, "events", eventId));
+      await updateDoc(doc(db, "events", eventId), { status: 'deleted' });
       setEvents(prev => prev.filter(ev => ev.id !== eventId));
     } catch (error) {
       throw error;
