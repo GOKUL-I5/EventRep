@@ -47,8 +47,12 @@ const CreateEvent = () => {
     try {
       // Pass the selected image file and gallery files
       const fullData = { ...data, ticketTypes };
-      const eventId = await createEvent(fullData, selectedFile, galleryFiles);
-      toast.success("Event created successfully!");
+      const { id: eventId, fallbackUsed } = await createEvent(fullData, selectedFile, galleryFiles);
+      if (fallbackUsed) {
+        toast.warning("Event submitted successfully with a placeholder image. Note: Firebase Storage upload failed (verify CORS settings).");
+      } else {
+        toast.success("Event created successfully!");
+      }
       navigate(`/events/manage`);
     } catch (error) {
       console.error(error);
