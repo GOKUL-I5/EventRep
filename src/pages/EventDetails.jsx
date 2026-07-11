@@ -35,6 +35,9 @@ const EventDetails = () => {
     const q = query(collection(db, `events/${id}/reviews`), orderBy('timestamp', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      // Gracefully catch reviews permission error if rules are not deployed yet
+      setReviews([]);
     });
 
     return () => unsubscribe();
@@ -64,24 +67,36 @@ const EventDetails = () => {
   };
 
   useEffect(() => {
-    if (!loading && event) {
-      // GSAP Animations
+    if (loading || !event) return;
+
+    // Use GSAP Context for clean React animation scoping and automatic cleanup
+    const ctx = gsap.context(() => {
+      // Animate banner immediately
       gsap.fromTo('.anim-banner', { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' });
       
-      gsap.utils.toArray('.anim-card').forEach((card, i) => {
+      // Animate cards on scroll
+      gsap.utils.toArray('.anim-card').forEach((card) => {
         gsap.fromTo(card, 
           { opacity: 0, y: 30 },
           { 
             opacity: 1, y: 0, duration: 0.6, ease: 'power2.out',
             scrollTrigger: {
               trigger: card,
-              start: 'top 85%',
+              scroller: ".dashboard-content", // target the scrolling layout container
+              start: 'top 90%',
               toggleActions: 'play none none none'
             }
           }
         );
       });
-    }
+
+      // Force recalculate scroll positions after layout settles
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 150);
+    });
+
+    return () => ctx.revert(); // clean up all animations and scroll triggers
   }, [loading, event]);
 
   const handleShare = () => {
@@ -279,9 +294,45 @@ const EventDetails = () => {
               </div>
             </div>
 
+            {/* Organizer & Map Grid */}
+            <div className="grid-mobile-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              {/* Organizer Info */}
+              <div className="card anim-card" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Organized By</h3>
+                {organizer ? (
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: organizer.photoURL ? `url(${organizer.photoURL}) center/cover` : 'var(--color-glass-border)' }} />
+                    <div>
+                      <span style={{ display: 'block', fontWeight: '600', fontSize: '1rem' }}>{organizer.firstName} {organizer.lastName}</span>
+                      <span style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>@{organizer.username}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Organizer info unavailable</span>
+                )}
+              </div>
+
+              {/* Location Map */}
+              <div className="card anim-card" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Location Map</h3>
+                <div style={{ width: '100%', height: '250px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden', border: '1px solid var(--color-glass-border)' }}>
+                  <iframe 
+                    width="100%" 
+                    height="100%" 
+                    frameBorder="0" 
+                    scrolling="no" 
+                    marginHeight="0" 
+                    marginWidth="0" 
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(event.location)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                    style={{ filter: 'invert(90%) hue-rotate(180deg)' }} /* Creates a dark mode map effect */
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Right Column: Sticky Ticket & Organizer */}
+          {/* Right Column: Sticky Ticket & Related */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             
             {/* Ticket Card */}
@@ -322,39 +373,6 @@ const EventDetails = () => {
                 style={{ width: '100%', background: isRegistered ? 'rgba(255,255,255,0.1)' : 'var(--color-accent)', color: isRegistered ? 'var(--color-text-secondary)' : '#fff', padding: '1rem', borderRadius: '12px', fontSize: '1.1rem', fontWeight: '600', border: 'none', cursor: isRegistered ? 'not-allowed' : 'pointer', boxShadow: isRegistered ? 'none' : 'var(--shadow-md)', transition: 'transform 0.2s' }}>
                 {isRegistered ? 'Already Registered' : 'Register Now'}
               </motion.button>
-            </div>
-
-            {/* Organizer Info */}
-            <div className="card anim-card" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Organized By</h3>
-              {organizer ? (
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: organizer.photoURL ? `url(${organizer.photoURL}) center/cover` : 'var(--color-glass-border)' }} />
-                  <div>
-                    <span style={{ display: 'block', fontWeight: '600', fontSize: '1rem' }}>{organizer.firstName} {organizer.lastName}</span>
-                    <span style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>@{organizer.username}</span>
-                  </div>
-                </div>
-              ) : (
-                <span style={{ color: 'var(--color-text-secondary)' }}>Organizer info unavailable</span>
-              )}
-            </div>
-
-            {/* Location Map */}
-            <div className="card anim-card" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Location Map</h3>
-              <div style={{ width: '100%', height: '250px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden', border: '1px solid var(--color-glass-border)' }}>
-                <iframe 
-                  width="100%" 
-                  height="100%" 
-                  frameBorder="0" 
-                  scrolling="no" 
-                  marginHeight="0" 
-                  marginWidth="0" 
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(event.location)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
-                  style={{ filter: 'invert(90%) hue-rotate(180deg)' }} /* Creates a dark mode map effect */
-                ></iframe>
-              </div>
             </div>
 
             {/* Related Events */}

@@ -23,6 +23,8 @@ const EventDiscovery = lazy(() => import('./pages/EventDiscovery'));
 const EventDetails = lazy(() => import('./pages/EventDetails'));
 const MyTickets = lazy(() => import('./pages/MyTickets'));
 const StaticAdminDashboard = lazy(() => import('./pages/StaticAdminDashboard'));
+const Attendees = lazy(() => import('./pages/Attendees'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 
 // Lazy-loaded Admin Pages
 import AdminRoute from './components/AdminRoute';
@@ -79,9 +81,21 @@ const AnimatedRoutes = () => {
           />
           <Route 
             path="/events/:id" 
+            element={<PageTransition><EventDetails /></PageTransition>} 
+          />
+          <Route 
+            path="/attendees" 
             element={
               <ProtectedRoute>
-                <PageTransition><EventDetails /></PageTransition>
+                <PageTransition><Attendees /></PageTransition>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/analytics" 
+            element={
+              <ProtectedRoute>
+                <PageTransition><Analytics /></PageTransition>
               </ProtectedRoute>
             } 
           />
@@ -153,7 +167,7 @@ function App() {
   }, []);
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <AnimatePresence mode="wait">
           {loading ? <SplashLoader key="loader" /> : null}

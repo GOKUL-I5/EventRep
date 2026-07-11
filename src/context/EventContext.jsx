@@ -96,8 +96,8 @@ export const EventProvider = ({ children }) => {
 
       return () => unsubscribe();
     } else {
-      // Non-admins see all approved and pending events, plus their own created events (draft, pending, etc.)
-      const qApproved = query(collection(db, "events"), where("status", "in", ["approved", "pending"]));
+      // Non-admins see all approved events, plus their own created events (draft, pending, etc.)
+      const qApproved = query(collection(db, "events"), where("status", "==", "approved"));
       
       let approvedEvents = [];
       let myEvents = [];
@@ -430,9 +430,15 @@ export const EventProvider = ({ children }) => {
     if (existing) throw new Error("You are already registered for this event");
 
     try {
+      // Get the organizer ID for the event
+      const eventDocRef = doc(db, "events", eventId);
+      const eventSnap = await getDoc(eventDocRef);
+      const organizerId = eventSnap.exists() ? (eventSnap.data().organizerId || "") : "";
+
       const ticketRef = doc(collection(db, "tickets"));
       const newTicket = {
         eventId,
+        organizerId,
         userId: currentUser.uid,
         status: 'active',
         qrCodeData: `ticket:${ticketRef.id}:${eventId}:${currentUser.uid}`,

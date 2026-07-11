@@ -28,6 +28,10 @@ export const NotificationProvider = ({ children }) => {
       const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setNotifications(notifs);
       setUnreadCount(notifs.filter(n => !n.read).length);
+    }, (error) => {
+      // Gracefully catch notifications permission error
+      setNotifications([]);
+      setUnreadCount(0);
     });
 
     return () => unsubscribe();
