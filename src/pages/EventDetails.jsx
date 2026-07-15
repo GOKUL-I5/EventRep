@@ -14,7 +14,7 @@ import EventHero from '../components/event-details/EventHero';
 import TicketCard from '../components/event-details/TicketCard';
 import OrganizerCard from '../components/event-details/OrganizerCard';
 import GoogleMapCard from '../components/event-details/GoogleMapCard';
-import EventTimeline from '../components/event-details/EventTimeline';
+
 import ReviewSection from '../components/event-details/ReviewSection';
 import RecommendationCarousel from '../components/event-details/RecommendationCarousel';
 import BookingForm from '../components/booking/BookingForm';
@@ -382,8 +382,7 @@ export default function EventDetails() {
               </div>
             )}
 
-            {/* Event Timeline Agenda */}
-            <EventTimeline event={event} />
+
 
             {/* Reviews list dashboard */}
             <ReviewSection eventId={id} currentUser={currentUser} />
