@@ -114,10 +114,11 @@ export const downloadPDFTicket = async (event, booking, qrCodeDataUrl) => {
     doc.text(splitVenue, 52.5, 77, { align: 'center' });
 
     // 6. Attendee Info Container Card
+    const cardHeight = booking.attendeeLinkedin ? 26 : 25;
     doc.setFillColor(20, 29, 47);
-    doc.rect(8, 83, 89, 25, 'F');
+    doc.rect(8, 83, 89, cardHeight, 'F');
     doc.setDrawColor(255, 255, 255, 0.05);
-    doc.rect(8, 83, 89, 25, 'S');
+    doc.rect(8, 83, 89, cardHeight, 'S');
 
     // Column 1: Attendee details
     doc.setFont('helvetica', 'bold');
@@ -128,16 +129,26 @@ export const downloadPDFTicket = async (event, booking, qrCodeDataUrl) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text(booking.attendeeName || 'Guest Registrant', 12, 93);
+    doc.text(booking.attendeeName || 'Guest Registrant', 12, 92.5);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
+    doc.setFontSize(6);
     doc.setTextColor(148, 163, 184);
-    doc.text(booking.attendeeEmail || '', 12, 97);
-    doc.text(booking.attendeePhone || '', 12, 101);
+    doc.text(booking.attendeeEmail || '', 12, 96.5);
+    doc.text(booking.attendeePhone || '', 12, 99.5);
     
-    const addressLabel = doc.splitTextToSize(booking.attendeeAddress || '', 40);
-    doc.text(addressLabel, 12, 105);
+    let yPos = 102.5;
+    if (booking.attendeeLinkedin) {
+      const cleanLinkedin = booking.attendeeLinkedin.replace(/^https?:\/\/(www\.)?/, '');
+      const splitLinkedin = doc.splitTextToSize(`LI: ${cleanLinkedin}`, 40);
+      doc.text(splitLinkedin, 12, yPos);
+      yPos += 3.5;
+    }
+
+    if (booking.attendeeAddress) {
+      const addressLabel = doc.splitTextToSize(booking.attendeeAddress, 40);
+      doc.text(addressLabel, 12, yPos);
+    }
 
     // Column 2: Ticket Type & Qty
     doc.setFont('helvetica', 'bold');

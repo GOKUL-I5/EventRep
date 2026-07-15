@@ -162,6 +162,7 @@ export default function EventDetails() {
         attendeeEmail: bookingDetails.attendeeEmail,
         attendeePhone: bookingDetails.attendeePhone,
         attendeeAddress: bookingDetails.attendeeAddress,
+        attendeeLinkedin: bookingDetails.attendeeLinkedin || '',
         ticketType: bookingDetails.ticketType,
         quantity: bookingDetails.quantity,
         amount: bookingDetails.amount,
@@ -210,35 +211,14 @@ export default function EventDetails() {
       }));
 
       toast.success("Ticket booked successfully!");
-
-      setQrValue(qrCodeData);
       
-      setTimeout(async () => {
-        const canvas = document.getElementById('checkout-qr-canvas');
-        const qrCodeDataUrl = canvas ? canvas.toDataURL('image/jpeg') : null;
-        
-        try {
-          await downloadPDFTicket(event, {
-            bookingId,
-            attendeeName: bookingDetails.attendeeName,
-            attendeeEmail: bookingDetails.attendeeEmail,
-            attendeePhone: bookingDetails.attendeePhone,
-            attendeeAddress: bookingDetails.attendeeAddress,
-            quantity: bookingDetails.quantity,
-            ticketType: bookingDetails.ticketType,
-            amount: bookingDetails.amount
-          }, qrCodeDataUrl);
-        } catch (pdfErr) {
-          console.error("Failed to generate/download PDF ticket:", pdfErr);
-        }
+      await fetchMyTickets();
 
-        setShowBookingForm(false);
-        setQrValue('');
-        await fetchMyTickets();
-      }, 200);
+      return { bookingId, qrCodeData, newBooking };
     } catch (err) {
       console.error("Booking error: ", err);
       toast.error("Failed to complete booking");
+      throw err;
     } finally {
       setLoadingRegister(false);
     }
