@@ -62,10 +62,8 @@ export default function BookingForm({ event, user, loading, onSubmit, onClose })
     }
     if (!attendeeAddress.trim()) errs.address = 'Address is required';
 
-    if (isWorkshop) {
-      if (!attendeeLinkedin.trim()) {
-        errs.linkedin = 'LinkedIn URL is required for workshops/learning events';
-      } else if (!/^(https?:\/\/)?(www\.)?linkedin\.com\/.+$/i.test(attendeeLinkedin.trim())) {
+    if (isWorkshop && attendeeLinkedin.trim()) {
+      if (!/^(https?:\/\/)?(www\.)?linkedin\.com\/.+$/i.test(attendeeLinkedin.trim())) {
         errs.linkedin = 'Enter a valid LinkedIn URL (e.g. linkedin.com/in/username)';
       }
     }
@@ -470,7 +468,7 @@ export default function BookingForm({ event, user, loading, onSubmit, onClose })
                       }}>
                         <FiLinkedin style={{ color: '#0077b5' }} />
                         <input 
-                          type="url" placeholder="LinkedIn Profile URL (required for workshops)" value={attendeeLinkedin} onChange={(e) => setAttendeeLinkedin(e.target.value)}
+                          type="url" placeholder="LinkedIn Profile URL (optional)" value={attendeeLinkedin} onChange={(e) => setAttendeeLinkedin(e.target.value)}
                           style={{ background: 'transparent', border: 'none', color: '#ffffff', outline: 'none', width: '100%', fontSize: '0.9rem' }}
                         />
                       </div>

@@ -92,7 +92,6 @@ const ManageEvents = () => {
   };
 
   const toggleStatus = async (event) => {
-<<<<<<< HEAD
     const isApproved = userData?.isApprovedCreator === true || userData?.role === 'super_admin';
     const newStatus = (event.status === 'approved' || event.status === 'pending') 
       ? 'draft' 
@@ -105,14 +104,6 @@ const ManageEvents = () => {
         newStatus === 'pending' ? 'Event submitted for review' : 
         'Event unpublished to draft'
       );
-=======
-    // If approved or pending, Unpublish to draft. If draft or rejected, publish directly (approved).
-    const newStatus = (event.status === 'approved' || event.status === 'pending') ? 'draft' : 'approved';
-    try {
-      await updateEvent(event.id, { status: newStatus });
-      setMyEvents(prev => prev.map(ev => ev.id === event.id ? { ...ev, status: newStatus } : ev));
-      toast.success(newStatus === 'approved' ? 'Event published successfully' : 'Event unpublished to draft');
->>>>>>> 102ff79748ed9d92c11d9afba904b1e9c8466c00
     } catch (error) {
       toast.error("Failed to update status");
     }
