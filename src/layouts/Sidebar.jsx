@@ -18,12 +18,11 @@ const Sidebar = ({ isOpen, toggleSidebar, isMobile }) => {
 
   const adminNavItems = [
     { name: 'Admin Dashboard', icon: FiShield, path: '/admin/dashboard' },
-    { name: 'Manage Users', icon: FiUsers, path: '/admin/users' },
-    { name: 'Global Events', icon: FiActivity, path: '/admin/events' },
+    { name: 'Creator Approval', icon: FiUsers, path: '/admin/users' },
     { name: 'System Settings', icon: FiSettings, path: '/admin/settings' },
   ];
 
-  const navItems = userData?.role === 'admin' 
+  const navItems = userData?.role === 'super_admin' 
     ? [...baseNavItems, ...adminNavItems]
     : baseNavItems;
 

@@ -148,7 +148,7 @@ const AdminDashboard = () => {
         <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
           <h2 style={{ marginBottom: '1rem' }}>Welcome to the Control Center</h2>
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-            Use the sidebar to manage users, moderate events, and adjust system settings. Role-based access ensures only authorized administrators can view this data.
+            Use the sidebar to approve event creators, view platform analytics, and adjust system settings. Role-based access ensures only the authorized Super Admin can view this data.
           </p>
         </div>
       </div>

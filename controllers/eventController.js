@@ -6,7 +6,7 @@ const getAllEvents = async (req, res, next) => {
 
     // Fetch approved events by default, unless admin
     let eventsSnap;
-    if (req.user && req.user.role === 'admin') {
+    if (req.user && (req.user.role === 'super_admin' || req.user.role === 'admin')) {
       eventsSnap = await db.collection("events").orderBy("createdAt", "desc").get();
     } else {
       eventsSnap = await db.collection("events")

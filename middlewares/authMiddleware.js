@@ -23,7 +23,7 @@ const verifyAdmin = async (req, res, next) => {
     const { db } = require('../config/firebaseAdmin');
     const userDoc = await db.collection('users').doc(req.user.uid).get();
     
-    if (userDoc.exists && userDoc.data().role === 'admin') {
+    if (userDoc.exists && userDoc.data().role === 'super_admin') {
       next();
     } else {
       return res.status(403).json({ error: 'Forbidden', message: 'Requires admin privileges' });

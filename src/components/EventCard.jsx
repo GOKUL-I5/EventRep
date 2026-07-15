@@ -16,8 +16,7 @@ const EventCard = ({ event, viewMode = 'grid', index = 0 }) => {
   const navigate = useNavigate();
 
   const isOwner = currentUser && event.organizerId === currentUser.uid;
-  const isAdmin = currentUser && currentUser.role === 'admin';
-  const canEdit = isOwner || isAdmin;
+  const canEdit = isOwner;
   const isRegistered = myTickets.some(t => t.eventId === event.id);
 
   const category = getCategoryData(event.category);

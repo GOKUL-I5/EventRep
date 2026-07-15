@@ -1,0 +1,10 @@
+# Auto-detect text files and normalize line endings to LF on commit
+* text=auto
+
+# Declare files that should always maintain LF line endings (useful for web files)
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.rules text eol=lf

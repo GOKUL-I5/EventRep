@@ -20,8 +20,9 @@ const updateUserProfile = async (req, res, next) => {
     if (!db) return res.status(503).json({ success: false, error: "Firebase DB not initialized" });
 
     const updates = req.body;
-    // Prevent changing role via this endpoint
+    // Prevent changing role and creator status via this endpoint
     delete updates.role;
+    delete updates.isApprovedCreator;
     
     await db.collection("users").doc(req.user.uid).update({
       ...updates,

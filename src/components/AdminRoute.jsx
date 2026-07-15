@@ -9,7 +9,7 @@ const AdminRoute = ({ children }) => {
     return <div>Loading...</div>; // Or a custom spinner
   }
 
-  if (!currentUser || userData.role !== 'admin') {
+  if (!currentUser || userData.role !== 'super_admin') {
     return <Navigate to="/dashboard" replace />;
   }
 

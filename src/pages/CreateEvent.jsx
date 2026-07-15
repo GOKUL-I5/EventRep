@@ -3,18 +3,22 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useEvent } from '../context/EventContext';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FiUploadCloud, FiCalendar, FiMapPin, FiDollarSign, FiUsers, FiTag } from 'react-icons/fi';
+import { FiUploadCloud, FiCalendar, FiMapPin, FiDollarSign, FiUsers, FiTag, FiLock, FiCheckCircle } from 'react-icons/fi';
 import DashboardLayout from '../layouts/DashboardLayout';
 
 const CreateEvent = () => {
   const { createEvent } = useEvent();
+  const { userData } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [ticketTypes, setTicketTypes] = useState([{ type: 'General', price: 0 }]);
+  
+  const isApproved = userData?.isApprovedCreator === true || userData?.role === 'super_admin';
 
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -68,9 +72,47 @@ const CreateEvent = () => {
         animate={{ opacity: 1, y: 0 }}
         style={{ maxWidth: '800px', margin: '0 auto' }}
       >
-        <h1 style={{ fontSize: '2rem', marginBottom: '2rem' }}>Create New Event</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '2rem', margin: 0 }}>Create New Event</h1>
+          {isApproved && (
+            <span style={{ 
+              background: 'rgba(16,185,129,0.1)', 
+              color: '#10b981', 
+              border: '1px solid rgba(16,185,129,0.2)',
+              padding: '0.35rem 0.85rem', 
+              borderRadius: '20px', 
+              fontSize: '0.75rem', 
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}>
+              <FiCheckCircle style={{ fontSize: '0.85rem' }} /> Verified Creator
+            </span>
+          )}
+        </div>
         
         <form onSubmit={handleSubmit(onSubmit)} className="card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {!isApproved && (
+            <div style={{
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              color: '#fca5a5',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FiLock /> Event Creation Restricted
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>
+                Your account is waiting for Super Admin approval before you can create events.
+              </p>
+            </div>
+          )}
           
           {/* Cover Image Upload */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -208,18 +250,18 @@ const CreateEvent = () => {
             <button 
               type="button" 
               onClick={() => handleSubmit((data) => onSubmit({ ...data, status: 'draft' }))()}
-              style={{ ...btnStyle('secondary'), opacity: loading ? 0.7 : 1 }}
-              disabled={loading}
+              style={{ ...btnStyle('secondary'), opacity: (loading || !isApproved) ? 0.5 : 1, cursor: !isApproved ? 'not-allowed' : 'pointer' }}
+              disabled={loading || !isApproved}
             >
               Save as Draft
             </button>
             <button 
               type="submit" 
-              onClick={() => handleSubmit((data) => onSubmit({ ...data, status: 'pending' }))()}
-              style={{ ...btnStyle('primary'), opacity: loading ? 0.7 : 1 }}
-              disabled={loading}
+              onClick={() => handleSubmit((data) => onSubmit({ ...data, status: 'approved' }))()}
+              style={{ ...btnStyle('primary'), opacity: (loading || !isApproved) ? 0.5 : 1, cursor: !isApproved ? 'not-allowed' : 'pointer' }}
+              disabled={loading || !isApproved}
             >
-              {loading ? 'Submitting...' : 'Submit for Approval'}
+              {loading ? 'Publishing...' : 'Publish Event'}
             </button>
           </div>
 

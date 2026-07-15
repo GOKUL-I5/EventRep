@@ -12,7 +12,7 @@ import {
   browserSessionPersistence,
   updatePassword
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { auth, googleProvider, db, storage } from '../services/firebase';
 
@@ -55,7 +55,8 @@ export function AuthProvider({ children }) {
         socialLinks: { twitter: '', linkedin: '', github: '' },
         photoURL: photoURL,
         createdAt: serverTimestamp(),
-        role: isAdminEmail ? 'admin' : 'user'
+        role: isAdminEmail ? 'super_admin' : 'user',
+        isApprovedCreator: isAdminEmail ? true : false
       };
 
       await setDoc(doc(db, "users", user.uid), userDoc);
@@ -118,14 +119,15 @@ export function AuthProvider({ children }) {
         socialLinks: { twitter: '', linkedin: '', github: '' },
         photoURL: user.photoURL || '',
         createdAt: serverTimestamp(),
-        role: isAdminEmail ? 'admin' : 'user'
+        role: isAdminEmail ? 'super_admin' : 'user',
+        isApprovedCreator: isAdminEmail ? true : false
       };
       await setDoc(docRef, userDoc);
       setUserData(userDoc);
     } else {
       const existingData = docSnap.data();
-      if (isAdminEmail && (existingData.role !== 'admin' || existingData.firstName !== 'gokul')) {
-        const updates = { role: 'admin', firstName: 'gokul', lastName: '', username: 'gokul' };
+      if (isAdminEmail && (existingData.role !== 'super_admin' || !existingData.isApprovedCreator || existingData.firstName !== 'gokul')) {
+        const updates = { role: 'super_admin', isApprovedCreator: true, firstName: 'gokul', lastName: '', username: 'gokul' };
         await updateDoc(docRef, updates);
         setUserData({ ...existingData, ...updates });
       } else {
@@ -151,47 +153,72 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    let unsubscribeUserDoc = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      
+      // Clean up previous snapshot listener if it exists
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+        unsubscribeUserDoc = null;
+      }
+
       if (user) {
         const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
         const isAdminEmail = user.email.toLowerCase() === 'gokulmadara.1@gmail.com';
-        if (docSnap.exists()) {
-          const existingData = docSnap.data();
-          if (isAdminEmail && (existingData.role !== 'admin' || existingData.firstName !== 'gokul')) {
-            const updates = { role: 'admin', firstName: 'gokul', lastName: '', username: 'gokul' };
-            await updateDoc(docRef, updates);
-            setUserData({ ...existingData, ...updates });
+
+        // Listen for real-time changes to the user's Firestore document
+        unsubscribeUserDoc = onSnapshot(docRef, async (docSnap) => {
+          if (docSnap.exists()) {
+            const existingData = docSnap.data();
+            
+            // Auto-promote hardcoded admin email if needed
+            if (isAdminEmail && (existingData.role !== 'super_admin' || !existingData.isApprovedCreator || existingData.firstName !== 'gokul')) {
+              const updates = { role: 'super_admin', isApprovedCreator: true, firstName: 'gokul', lastName: '', username: 'gokul' };
+              await updateDoc(docRef, updates);
+              setUserData({ ...existingData, ...updates });
+            } else {
+              setUserData(existingData);
+            }
           } else {
-            setUserData(existingData);
+            // Document doesn't exist yet, check if it's the admin logging in for the first time
+            if (isAdminEmail) {
+              const userDoc = {
+                uid: user.uid,
+                firstName: 'gokul',
+                lastName: '',
+                username: 'gokul',
+                email: user.email,
+                bio: '',
+                location: '',
+                socialLinks: { twitter: '', linkedin: '', github: '' },
+                photoURL: user.photoURL || '',
+                createdAt: serverTimestamp(),
+                role: 'super_admin',
+                isApprovedCreator: true
+              };
+              await setDoc(docRef, userDoc);
+              setUserData(userDoc);
+            } else {
+              setUserData(null);
+            }
           }
-        } else if (isAdminEmail) {
-          const userDoc = {
-            uid: user.uid,
-            firstName: 'gokul',
-            lastName: '',
-            username: 'gokul',
-            email: user.email,
-            bio: '',
-            location: '',
-            socialLinks: { twitter: '', linkedin: '', github: '' },
-            photoURL: user.photoURL || '',
-            createdAt: serverTimestamp(),
-            role: 'admin'
-          };
-          await setDoc(docRef, userDoc);
-          setUserData(userDoc);
-        } else {
-          setUserData(docSnap.data());
-        }
+          setLoading(false);
+        }, (error) => {
+          console.error("Error listening to user document: ", error);
+          setLoading(false);
+        });
       } else {
         setUserData(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (unsubscribeUserDoc) unsubscribeUserDoc();
+    };
   }, []);
 
   const value = {

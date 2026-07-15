@@ -54,7 +54,7 @@ const EventContext = createContext();
 export const useEvent = () => useContext(EventContext);
 
 export const EventProvider = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
   const [events, setEvents] = useState([]);
   const [myTickets, setMyTickets] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
@@ -64,8 +64,8 @@ export const EventProvider = ({ children }) => {
   useEffect(() => {
     setLoadingEvents(true);
     
-    if (currentUser && currentUser.role === 'admin') {
-      // Admins see all events, ordered by createdAt desc in memory to avoid index requirements if any filter is added later.
+    if (userData && userData.role === 'super_admin') {
+      // Super Admins see all events, ordered by createdAt desc in memory to avoid index requirements if any filter is added later.
       const q = query(collection(db, "events"));
       const unsubscribe = onSnapshot(q, async (querySnapshot) => {
         if (querySnapshot.empty && !isSeeding) {
@@ -154,7 +154,7 @@ export const EventProvider = ({ children }) => {
         unsubscribeMyEvents();
       };
     }
-  }, [currentUser]);
+  }, [currentUser, userData]);
 
   // Fetch tickets whenever currentUser changes
   useEffect(() => {
@@ -268,7 +268,9 @@ export const EventProvider = ({ children }) => {
         imageUrl,
         galleryUrls: galleryUrls.filter(url => !!url),
         organizerId: currentUser.uid,
-        status: eventData.status || 'pending', // draft, pending, approved, rejected
+        status: eventData.status === 'draft' ? 'draft' : (
+          (userData?.isApprovedCreator === true || userData?.role === 'super_admin') ? 'approved' : 'pending'
+        ), // draft, pending, approved, rejected
         likesCount: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
