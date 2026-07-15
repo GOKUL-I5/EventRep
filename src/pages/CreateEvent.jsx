@@ -258,10 +258,17 @@ const CreateEvent = () => {
             <button 
               type="submit" 
               onClick={() => handleSubmit((data) => onSubmit({ ...data, status: 'approved' }))()}
+<<<<<<< HEAD
               style={{ ...btnStyle('primary'), opacity: (loading || !isApproved) ? 0.5 : 1, cursor: !isApproved ? 'not-allowed' : 'pointer' }}
               disabled={loading || !isApproved}
             >
               {loading ? 'Publishing...' : 'Publish Event'}
+=======
+              style={{ ...btnStyle('primary'), opacity: loading ? 0.7 : 1 }}
+              disabled={loading}
+            >
+              {loading ? 'Submitting...' : 'Create Event'}
+>>>>>>> 102ff79748ed9d92c11d9afba904b1e9c8466c00
             </button>
           </div>
 

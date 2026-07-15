@@ -33,11 +33,33 @@ export default function EventDetails() {
   const [loadingRegister, setLoadingRegister] = useState(false);
   const [error, setError] = useState(null);
   
+<<<<<<< HEAD
   // Real-time Likes and Bookmarks states
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [qrValue, setQrValue] = useState('');
+=======
+  // Review form state
+  const [newReview, setNewReview] = useState('');
+  const [newRating, setNewRating] = useState(5);
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  useEffect(() => {
+    fetchEventDetails();
+    // Subscribe to reviews
+    const q = query(collection(db, `events/${id}/reviews`), orderBy('timestamp', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      // Gracefully catch reviews permission error if rules are not deployed yet
+      setReviews([]);
+    });
+
+    return () => unsubscribe();
+  }, [id]);
+>>>>>>> 102ff79748ed9d92c11d9afba904b1e9c8466c00
 
   const fetchEventDetails = async () => {
     setLoading(true);
@@ -67,8 +89,42 @@ export default function EventDetails() {
   };
 
   useEffect(() => {
+<<<<<<< HEAD
     fetchEventDetails();
   }, [id]);
+=======
+    if (loading || !event) return;
+
+    // Use GSAP Context for clean React animation scoping and automatic cleanup
+    const ctx = gsap.context(() => {
+      // Animate banner immediately
+      gsap.fromTo('.anim-banner', { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' });
+      
+      // Animate cards on scroll
+      gsap.utils.toArray('.anim-card').forEach((card) => {
+        gsap.fromTo(card, 
+          { opacity: 0, y: 30 },
+          { 
+            opacity: 1, y: 0, duration: 0.6, ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              scroller: ".dashboard-content", // target the scrolling layout container
+              start: 'top 90%',
+              toggleActions: 'play none none none'
+            }
+          }
+        );
+      });
+
+      // Force recalculate scroll positions after layout settles
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 150);
+    });
+
+    return () => ctx.revert(); // clean up all animations and scroll triggers
+  }, [loading, event]);
+>>>>>>> 102ff79748ed9d92c11d9afba904b1e9c8466c00
 
   // Listen to bookmarks and likes
   useEffect(() => {
@@ -388,6 +444,7 @@ export default function EventDetails() {
             {/* Reviews list dashboard */}
             <ReviewSection eventId={id} currentUser={currentUser} />
 
+<<<<<<< HEAD
             {/* Recommended events scroller */}
             <RecommendationCarousel 
               events={events} 
@@ -398,6 +455,48 @@ export default function EventDetails() {
 
           {/* RIGHT COLUMN: Tickets Checkout, Organizer profile, Maps directions */}
           <div className="lg:col-span-1 flex flex-col gap-10 lg:sticky lg:top-6">
+=======
+            {/* Organizer & Map Grid */}
+            <div className="grid-mobile-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              {/* Organizer Info */}
+              <div className="card anim-card" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Organized By</h3>
+                {organizer ? (
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: organizer.photoURL ? `url(${organizer.photoURL}) center/cover` : 'var(--color-glass-border)' }} />
+                    <div>
+                      <span style={{ display: 'block', fontWeight: '600', fontSize: '1rem' }}>{organizer.firstName} {organizer.lastName}</span>
+                      <span style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>@{organizer.username}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Organizer info unavailable</span>
+                )}
+              </div>
+
+              {/* Location Map */}
+              <div className="card anim-card" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Location Map</h3>
+                <div style={{ width: '100%', height: '250px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden', border: '1px solid var(--color-glass-border)' }}>
+                  <iframe 
+                    width="100%" 
+                    height="100%" 
+                    frameBorder="0" 
+                    scrolling="no" 
+                    marginHeight="0" 
+                    marginWidth="0" 
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(event.location)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                    style={{ filter: 'invert(90%) hue-rotate(180deg)' }} /* Creates a dark mode map effect */
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Column: Sticky Ticket & Related */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+>>>>>>> 102ff79748ed9d92c11d9afba904b1e9c8466c00
             
             {/* Ticket Card Pass stub */}
             <TicketCard 
@@ -415,8 +514,28 @@ export default function EventDetails() {
             {/* Location Maps */}
             <GoogleMapCard event={event} />
 
+<<<<<<< HEAD
             {/* Organizer Profile Stats widget */}
             <OrganizerCard event={event} />
+=======
+            {/* Related Events */}
+            {relatedEvents.length > 0 && (
+              <div className="card anim-card" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Similar Events</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {relatedEvents.map(re => (
+                    <div key={re.id} onClick={() => navigate(`/events/${re.id}`)} style={{ display: 'flex', gap: '1rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '8px', transition: 'background 0.2s' }} className="hover-bg">
+                      <div style={{ width: '60px', height: '60px', borderRadius: '8px', background: re.imageUrl ? `url(${re.imageUrl}) center/cover` : 'var(--color-glass-border)' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <span style={{ fontWeight: '600', fontSize: '0.875rem', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{re.title}</span>
+                        <span style={{ color: 'var(--color-accent)', fontSize: '0.75rem', fontWeight: '600' }}>{re.date}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+>>>>>>> 102ff79748ed9d92c11d9afba904b1e9c8466c00
 
           </div>
 
