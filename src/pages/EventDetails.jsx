@@ -69,6 +69,18 @@ export default function EventDetails() {
   useEffect(() => {
     fetchEventDetails();
   }, [id]);
+        );
+      });
+
+      // Force recalculate scroll positions after layout settles
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 150);
+    });
+
+    return () => ctx.revert(); // clean up all animations and scroll triggers
+  }, [loading, event]);
+>>>>>>> 102ff79748ed9d92c11d9afba904b1e9c8466c00
 
   // Listen to bookmarks and likes
   useEffect(() => {
