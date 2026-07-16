@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiUser, FiMail, FiPhone, FiMapPin, FiCreditCard, FiGlobe, FiLinkedin } from 'react-icons/fi';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -131,6 +131,15 @@ export default function BookingForm({ event, user, loading, onSubmit, onClose })
       setProcessing(false);
     }
   };
+
+  useEffect(() => {
+    if (step === 'success' && bookingResult && !isPaid) {
+      const timer = setTimeout(() => {
+        handleDownloadPDF();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [step, bookingResult, isPaid]);
 
   const handleDownloadPDF = async () => {
     if (!bookingResult) return;
